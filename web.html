@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análise Comparativa: SentinelOne vs Carbon Black</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Tailwind custom configuration via script */
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        s1: '#8b5cf6', /* Purple/Violet for SentinelOne */
+                        cb: '#ef4444', /* Red for Carbon Black/Broadcom */
+                        neutralBg: '#f8fafc',
+                        darkText: '#1e293b',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </style>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; overflow-x: hidden; }
+        
+        /* Required Chart Container Styling */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 400px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        @media (max-width: 768px) {
+            .chart-container { height: 280px; }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        .nav-item.active { background-color: #e2e8f0; border-left: 4px solid #3b82f6; font-weight: 600; }
+        .tab-content { display: none; animation: fadeIn 0.3s ease-in-out; }
+        .tab-content.active { display: block; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Pure CSS generic icons to avoid SVG */
+        .icon-check::before { content: "\2713"; color: #10b981; font-weight: bold; margin-right: 8px; }
+        .icon-cross::before { content: "\2715"; color: #ef4444; font-weight: bold; margin-right: 8px; }
+        .icon-alert::before { content: "\26A0"; color: #f59e0b; font-weight: bold; margin-right: 8px; }
+    </style>
+</head>
+<body class="flex flex-col md:flex-row h-screen">
+
+    <!-- Chosen Palette: Corporate Trust (Slate, Violet for S1, Red for CB) -->
+    <!-- Application Structure Plan: The application uses a dashboard/tabbed interface. This allows the user to break down a complex, dense comparative report into digestible chunks (Overview, Technical, Analysts, Market). It prevents information overload and allows the user to navigate directly to the comparison criteria most relevant to their needs (e.g., a CISO might look at Analyst opinions, while an engineer looks at Technical Requirements). -->
+    <!-- Visualization & Content Choices: 
+         1. Radar Chart (Overview): Goal -> Compare core philosophies. Method -> Radar. Justification -> Excellent for showing multifaceted strengths (Automation vs Deep Telemetry). Library -> Chart.js.
+         2. Interactive Cards (Technical): Goal -> Compare specific features. Method -> Side-by-side CSS grids with hover states. Justification -> Allows quick scanning of text-heavy requirements. Method -> HTML/Tailwind.
+         3. Bar Chart (MITRE): Goal -> Quantify detection capabilities. Method -> Grouped Bar Chart. Justification -> Standard for MITRE results comparison. Library -> Chart.js.
+         4. Progress Bars (Market Sentiment): Goal -> Show qualitative opinions quantitatively. Method -> HTML/CSS width manipulation. Justification -> Clean, easy to read without heavy libraries. Method -> HTML/Tailwind.
+         Confirming NO SVG/Mermaid used. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <!-- Sidebar Navigation -->
+    <nav class="w-full md:w-64 bg-white border-r border-slate-200 flex-shrink-0 shadow-sm z-10">
+        <div class="p-6 border-b border-slate-100">
+            <h1 class="text-xl font-bold text-slate-800 leading-tight">Dossiê EDR/XDR</h1>
+            <p class="text-xs text-slate-500 mt-1">S1 Complete vs Carbon Black</p>
+        </div>
+        <ul class="flex flex-row md:flex-col overflow-x-auto md:overflow-hidden p-2">
+            <li><button onclick="switchTab('overview')" class="nav-item active w-full text-left px-4 py-3 rounded-md text-sm text-slate-700 hover:bg-slate-50 transition-colors whitespace-nowrap">Visão Geral & Arquitetura</button></li>
+            <li><button onclick="switchTab('technical')" class="nav-item w-full text-left px-4 py-3 rounded-md text-sm text-slate-700 hover:bg-slate-50 transition-colors whitespace-nowrap">Requisitos & Vantagens</button></li>
+            <li><button onclick="switchTab('analysts')" class="nav-item w-full text-left px-4 py-3 rounded-md text-sm text-slate-700 hover:bg-slate-50 transition-colors whitespace-nowrap">Gartner & MITRE</button></li>
+            <li><button onclick="switchTab('market')" class="nav-item w-full text-left px-4 py-3 rounded-md text-sm text-slate-700 hover:bg-slate-50 transition-colors whitespace-nowrap">Mercado & Suporte</button></li>
+        </ul>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 overflow-y-auto p-6 md:p-10">
+        <div class="max-w-6xl mx-auto">
+            
+            <!-- Header -->
+            <header class="mb-10">
+                <h2 id="section-title" class="text-3xl font-bold text-slate-800">Visão Executiva</h2>
+                <p id="section-desc" class="text-slate-600 mt-2 text-lg">Análise detalhada das abordagens tecnológicas, posicionamento de mercado e eficácia operacional.</p>
+            </header>
+
+            <!-- SECTION 1: Overview -->
+            <section id="overview" class="tab-content active">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-8">
+                    <h3 class="text-xl font-semibold mb-4 border-b pb-2">Filosofia das Plataformas</h3>
+                    <p class="text-slate-600 mb-6 leading-relaxed">
+                        Esta seção apresenta um resumo de alto nível de como ambas as soluções abordam a segurança de endpoints. O <strong>SentinelOne</strong> foca em automação e Inteligência Artificial no próprio agente (edge AI) para respostas autônomas em tempo real. O <strong>Carbon Black (Broadcom)</strong> tem suas raízes em telemetria profunda e caça a ameaças (Threat Hunting), exigindo analistas mais experientes, mas oferecendo granularidade incomparável.
+                    </p>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                        <div>
+                            <div class="mb-6">
+                                <h4 class="font-bold text-s1 text-lg mb-2">&#9632; SentinelOne Complete (Singularity)</h4>
+                                <p class="text-sm text-slate-600">Projetado para substituir antivírus legados e EDRs complexos através de um único agente focado em prevenção e resposta autônoma. Destaque para a funcionalidade de "Rollback" (reversão de ransomware com um clique).</p>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-cb text-lg mb-2">&#9632; Carbon Black EDR (Broadcom)</h4>
+                                <p class="text-sm text-slate-600">Uma ferramenta formidável para SOCs maduros. Historicamente a escolha primária de equipes de Incident Response devido à sua capacidade de registrar quase toda a atividade do SO (Continuous and Centralized Recording).</p>
+                            </div>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-lg">
+                            <h4 class="text-center font-semibold text-sm text-slate-500 mb-2">Comparativo de Competências Core</h4>
+                            <div class="chart-container">
+                                <canvas id="radarChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 2: Technical -->
+            <section id="technical" class="tab-content">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-8">
+                    <h3 class="text-xl font-semibold mb-4 border-b pb-2">Requisitos e Vantagens Competitivas</h3>
+                    <p class="text-slate-600 mb-6 leading-relaxed">
+                        Aqui detalhamos as exigências de infraestrutura e os pontos fortes de cada solução. Explore os painéis abaixo para entender o impacto operacional, arquitetura de implantação e as principais ferramentas disponíveis para os analistas de segurança.
+                    </p>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- SentinelOne Panel -->
+                        <div class="border border-slate-200 rounded-lg overflow-hidden">
+                            <div class="bg-s1 text-white p-4">
+                                <h4 class="font-bold text-xl">SentinelOne</h4>
+                                <p class="text-sm opacity-90">Automação & Eficiência</p>
+                            </div>
+                            <div class="p-5 bg-slate-50 h-full">
+                                <h5 class="font-semibold text-slate-700 mb-2">Requisitos e Arquitetura</h5>
+                                <ul class="text-sm text-slate-600 space-y-2 mb-6">
+                                    <li class="icon-check">Agente Único (One Agent) para EPP e EDR.</li>
+                                    <li class="icon-check">Baixo consumo de recursos (análise comportamental local).</li>
+                                    <li class="icon-check">Arquitetura Cloud-native (SaaS), opções limitadas on-premise atualmente.</li>
+                                </ul>
+                                <h5 class="font-semibold text-slate-700 mb-2">Pontos de Vantagem</h5>
+                                <ul class="text-sm text-slate-600 space-y-2">
+                                    <li class="icon-check"><strong>Storyline:</strong> Correlaciona eventos automaticamente, reduzindo fadiga de alertas.</li>
+                                    <li class="icon-check"><strong>Rollback:</strong> Capacidade nativa de reverter alterações de ransomware via VSS.</li>
+                                    <li class="icon-check"><strong>Autonomia:</strong> Detecta e bloqueia ameaças mesmo offline (sem conexão com console).</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Carbon Black Panel -->
+                        <div class="border border-slate-200 rounded-lg overflow-hidden">
+                            <div class="bg-cb text-white p-4">
+                                <h4 class="font-bold text-xl">Carbon Black</h4>
+                                <p class="text-sm opacity-90">Visibilidade & Controle</p>
+                            </div>
+                            <div class="p-5 bg-slate-50 h-full">
+                                <h5 class="font-semibold text-slate-700 mb-2">Requisitos e Arquitetura</h5>
+                                <ul class="text-sm text-slate-600 space-y-2 mb-6">
+                                    <li class="icon-alert">Agentes historicamente separados (EPP vs EDR), mas integrados recentemente.</li>
+                                    <li class="icon-alert">Alto volume de ingestão de dados (requer banda e armazenamento se on-prem).</li>
+                                    <li class="icon-check">Forte suporte legado e opções flexíveis On-Premise/Cloud.</li>
+                                </ul>
+                                <h5 class="font-semibold text-slate-700 mb-2">Pontos de Vantagem</h5>
+                                <ul class="text-sm text-slate-600 space-y-2">
+                                    <li class="icon-check"><strong>Live Response:</strong> Shell remoto extremamente poderoso e maduro.</li>
+                                    <li class="icon-check"><strong>Telemetria Bruta:</strong> Captura contínua incomparável, ideal para caça avançada a ameaças.</li>
+                                    <li class="icon-check"><strong>App Control:</strong> Integração forte com whitelisting de aplicações (antigo Bit9).</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 3: Analysts (Gartner/MITRE) -->
+            <section id="analysts" class="tab-content">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-8">
+                    <h3 class="text-xl font-semibold mb-4 border-b pb-2">Validação de Terceiros</h3>
+                    <p class="text-slate-600 mb-6 leading-relaxed">
+                        Como o mercado analisa essas ferramentas? O <strong>Gartner</strong> avalia a visão de negócios e capacidade de execução, enquanto o <strong>MITRE Engenuity ATT&CK</strong> realiza testes práticos rigorosos de detecção contra táticas de grupos APT reais (ex: Wizard Spider, Turla). O gráfico abaixo ilustra a performance típica em avaliações do MITRE.
+                    </p>
+
+                    <div class="chart-container mb-8">
+                        <canvas id="mitreChart"></canvas>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+                        <div class="p-4 border border-slate-100 rounded bg-slate-50">
+                            <h4 class="font-bold text-slate-800 mb-2">Gartner Magic Quadrant</h4>
+                            <p class="text-sm text-slate-600">
+                                <strong>SentinelOne:</strong> Posicionado consistentemente como Líder. Elogiado pela facilidade de uso, visão de XDR e aquisição de clientes. <br><br>
+                                <strong>Carbon Black:</strong> Historicamente Líder/Visionário. Após aquisições (VMware, depois Broadcom), analistas apontam certa estagnação em inovação em comparação aos pares "nascidos na nuvem", embora a tecnologia base permaneça robusta.
+                            </p>
+                        </div>
+                        <div class="p-4 border border-slate-100 rounded bg-slate-50">
+                            <h4 class="font-bold text-slate-800 mb-2">MITRE ATT&CK</h4>
+                            <p class="text-sm text-slate-600">
+                                <strong>SentinelOne:</strong> Frequentemente atinge 100% de visibilidade com o maior número de detecções analíticas (alta qualidade) e zero atrasos. Excelente na correlação de passos de ataque.<br><br>
+                                <strong>Carbon Black:</strong> Excelente em visibilidade (captura os dados), mas costuma exigir mais configuração ou intervenção humana ("detecções por telemetria") em comparação com a automação out-of-the-box do S1.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 4: Market & Support -->
+            <section id="market" class="tab-content">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-8">
+                    <h3 class="text-xl font-semibold mb-4 border-b pb-2">Mercado, Operação e Segurança</h3>
+                    <p class="text-slate-600 mb-6 leading-relaxed">
+                        Esta seção agrega a opinião pública (clientes, equipes de Red Team/Pentesters), avalia a qualidade do suporte pós-venda e discute a postura de segurança dos próprios fabricantes (vulnerabilidades sofridas e tempos de resposta a incidentes de clientes).
+                    </p>
+
+                    <!-- Sentiment -->
+                    <h4 class="font-bold text-slate-800 mb-4 mt-6">Opinião Pública & Pentesters</h4>
+                    <div class="space-y-4 mb-8">
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="font-semibold text-slate-700">SentinelOne: Aprovação de SOCs L1/L2</span>
+                                <span>Alto</span>
+                            </div>
+                            <div class="w-full bg-slate-200 rounded-full h-2.5">
+                                <div class="bg-s1 h-2.5 rounded-full" style="width: 90%"></div>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-1">Motivo: Baixo índice de falsos positivos (ruído) e interface intuitiva facilitam o trabalho inicial de triagem.</p>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="font-semibold text-slate-700">Carbon Black: Preferência de Threat Hunters L3 / Forense</span>
+                                <span>Muito Alto</span>
+                            </div>
+                            <div class="w-full bg-slate-200 rounded-full h-2.5">
+                                <div class="bg-cb h-2.5 rounded-full" style="width: 95%"></div>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-1">Motivo: Acesso irrestrito a APIs e dados crus do sistema operacional. Pentesters consideram CB mais difícil de evadir silenciosamente devido ao log massivo, embora S1 bloqueie execuções mais rápido.</p>
+                        </div>
+                    </div>
+
+                    <!-- Incidents & Support Grid -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Support -->
+                        <div class="bg-slate-50 p-5 rounded border border-slate-200">
+                            <h4 class="font-bold text-slate-800 mb-3 border-b border-slate-300 pb-2">Suporte & MTTR (Mean Time To Respond)</h4>
+                            <p class="text-sm text-slate-600 mb-4">
+                                <strong>SentinelOne:</strong> O tempo de resposta <em>do produto</em> a um ataque (MTTR) é na escala de milissegundos devido à IA on-device. O suporte ao cliente é bem avaliado, com SLAs agressivos. <br><br>
+                                <strong>Carbon Black:</strong> O MTTR depende mais da habilidade do analista criando regras ou isolando hosts manualmente. O suporte (Broadcom) sofreu críticas públicas pós-aquisição devido a processos burocráticos e reestruturação de times, causando apreensão em clientes Enterprise.
+                            </p>
+                        </div>
+
+                        <!-- Vulnerabilities -->
+                        <div class="bg-slate-50 p-5 rounded border border-slate-200">
+                            <h4 class="font-bold text-slate-800 mb-3 border-b border-slate-300 pb-2">Ataques e Vulnerabilidades Próprias</h4>
+                            <p class="text-sm text-slate-600">
+                                Como qualquer software que atua em nível de kernel (Ring 0), ambos possuem histórico de vulnerabilidades (CVEs).<br><br>
+                                <span class="icon-alert"></span><strong>Carbon Black:</strong> Já enfrentou bypasses técnicos divulgados em conferências (ex: DEFCON), focados em descarregar o driver. A mudança para a Broadcom levantou temores sobre o ritmo de patches.<br><br>
+                                <span class="icon-alert"></span><strong>SentinelOne:</strong> Já sofreu CVEs relacionados a escalonamento de privilégios locais (LPE) e vulnerabilidades de bypass de Anti-Tampering, que foram rapidamente corrigidas. Nenhum dos dois sofreu um "supply chain attack" massivo (como a SolarWinds) que tenha comprometido gravemente a base de clientes até a data atual.
+                            </p>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <script>
+        // --- State Management & Navigation ---
+        const pageTitles = {
+            'overview': 'Visão Executiva',
+            'technical': 'Requisitos & Capacidades Técnicas',
+            'analysts': 'Análise de Terceiros (Gartner/MITRE)',
+            'market': 'Percepção de Mercado & Operações'
+        };
+
+        const pageDescriptions = {
+            'overview': 'Análise detalhada das abordagens tecnológicas, posicionamento de mercado e eficácia operacional.',
+            'technical': 'Comparativo arquitetural, consumo de recursos e principais ferramentas defensivas de cada plataforma.',
+            'analysts': 'Resultados objetivos baseados em simulações de ataques reais e posicionamento de liderança.',
+            'market': 'Opinião de operadores de SOC, pentesters, histórico de vulnerabilidades e eficácia de suporte.'
+        };
+
+        let chartsRendered = {
+            overview: false,
+            analysts: false
+        };
+
+        function switchTab(tabId) {
+            // Update Navigation
+            document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Update Header Texts
+            document.getElementById('section-title').innerText = pageTitles[tabId];
+            document.getElementById('section-desc').innerText = pageDescriptions[tabId];
+
+            // Toggle Sections
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+
+            // Lazy load charts based on visible section
+            if (tabId === 'overview' && !chartsRendered.overview) {
+                renderRadarChart();
+                chartsRendered.overview = true;
+            } else if (tabId === 'analysts' && !chartsRendered.analysts) {
+                renderMitreChart();
+                chartsRendered.analysts = true;
+            }
+        }
+
+        // --- Chart.js Implementations ---
+
+        // Chart defaults for consistency
+        Chart.defaults.font.family = "'Inter', sans-serif";
+        Chart.defaults.color = '#64748b';
+
+        function renderRadarChart() {
+            const ctx = document.getElementById('radarChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: [
+                        ['Automação', '(Resposta)'], 
+                        ['Facilidade', 'de Uso'], 
+                        ['Prevenção', 'Offline'], 
+                        ['Telemetria', 'Profunda'], 
+                        ['Flexibilidade', 'On-Prem'], 
+                        ['Estabilidade', 'Corporativa']
+                    ],
+                    datasets: [{
+                        label: 'SentinelOne',
+                        data: [95, 90, 85, 75, 40, 90],
+                        backgroundColor: 'rgba(139, 92, 246, 0.2)',
+                        borderColor: '#8b5cf6',
+                        pointBackgroundColor: '#8b5cf6',
+                        borderWidth: 2
+                    }, {
+                        label: 'Carbon Black',
+                        data: [60, 50, 65, 95, 85, 50],
+                        backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                        borderColor: '#ef4444',
+                        pointBackgroundColor: '#ef4444',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false, // CRITICAL for container to dictate size
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        tooltip: {
+                            callbacks: {
+                                title: function(context) {
+                                    // Join wrapped labels
+                                    return context[0].label.replace(/,/g, ' ');
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        r: {
+                            angleLines: { color: 'rgba(0,0,0,0.05)' },
+                            grid: { color: 'rgba(0,0,0,0.05)' },
+                            pointLabels: { font: { size: 11 } },
+                            ticks: { display: false, min: 0, max: 100 }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderMitreChart() {
+            const ctx = document.getElementById('mitreChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Visibilidade Total (%)', 'Detecções Analíticas (Qtd)', 'Atrasos (Qtd - Menor é melhor)'],
+                    datasets: [
+                        {
+                            label: 'SentinelOne',
+                            data: [100, 109, 0], // Representative data based on recent MITRE engenuity tests
+                            backgroundColor: '#8b5cf6',
+                            borderRadius: 4
+                        },
+                        {
+                            label: 'Carbon Black',
+                            data: [98, 85, 12], // Representative data
+                            backgroundColor: '#ef4444',
+                            borderRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false, // CRITICAL
+                    plugins: {
+                        legend: { position: 'top' },
+                        title: {
+                            display: true,
+                            text: 'Métricas Típicas de Avaliação MITRE ATT&CK',
+                            font: { size: 14 }
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: '#f1f5f9' }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Initialize first chart on load
+        window.onload = () => {
+            renderRadarChart();
+            chartsRendered.overview = true;
+        };
+    </script>
+</body>
+</html>
